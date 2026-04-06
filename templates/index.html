@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Lucky 9</title>
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<style>
+body{background:#0b3d0b;color:white;text-align:center;font-family:Arial}
+.cards img{width:80px}
+button{padding:10px;margin:5px}
+</style>
+</head>
+<body>
+
+<h1>Lucky 9</h1>
+
+<input id="room" placeholder="Room">
+<button onclick="join()">Join</button>
+
+<h2 id="status"></h2>
+
+<div id="game" style="display:none">
+<h3>Your Cards</h3>
+<div id="myCards" class="cards"></div>
+
+<h3>Opponent Cards</h3>
+<div id="opCards" class="cards"></div>
+
+<button id="hitBtn" onclick="hit()">Hit</button>
+<button id="fightBtn" onclick="fight()">Fight</button>
+
+<h2 id="result"></h2>
+<button onclick="location.reload()">Play Again</button>
+</div>
+
+<script>
+var socket = io();
+var room="";
+var myId="";
+
+function join(){
+ room=document.getElementById("room").value;
+ socket.emit("join",{room:room});
+}
+
+socket.on("connect",()=>{myId=socket.id});
+
+socket.on("waiting",()=>{status.innerHTML="Waiting..."});
+socket.on("start",()=>{
+ status.innerHTML="Game Started";
+ document.getElementById("game").style.display="block";
+});
+
+function card(code){
+ return "<img src='https://deckofcardsapi.com/static/img/"+code+".png'>";
+}
+
+socket.on("update",(game)=>{
+ let players=Object.keys(game);
+ let me=game[myId];
+ let other=game[players.find(p=>p!=myId)];
+
+ myCards.innerHTML = me.cards.map(c=>card(c.code)).join("");
+ opCards.innerHTML = other.done ? other.cards.map(c=>card(c.code)).join("") : "Hidden";
+});
+
+socket.on("end",(data)=>{
+ let game=data.game;
+ let players=Object.keys(game);
+ let me=game[myId];
+ let other=game[players.find(p=>p!=myId)];
+
+ myCards.innerHTML = me.cards.map(c=>card(c.code)).join("");
+ opCards.innerHTML = other.cards.map(c=>card(c.code)).join("");
+
+ result.innerHTML = data.winner;
+});
+
+function hit(){socket.emit("hit",{room:room})}
+function fight(){socket.emit("fight",{room:room})}
+</script>
+
+</body>
+</html>
